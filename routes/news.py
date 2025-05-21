@@ -29,7 +29,7 @@ def get_latest_news():
         
         # Parameters for the API request
         params = {
-            'q': 'military OR "armed forces" OR "air force" OR "naval" OR battlefield OR warfare OR "military operation" OR "missile" OR "fighter jet" OR "aircraft carrier" OR "military conflict" OR "troops" OR "military intelligence" OR "operation sindoor"',
+            'q': 'military OR "armed forces" OR "air force" OR "navy" OR battlefield OR warfare OR "military operation" OR "missile" OR "fighter jet" OR "military intelligence"',
             'lang': 'en',
             'country': 'any',
             'max': 5,  # Fetch 5 articles
