@@ -84,7 +84,7 @@ def google_auth_callback():
         }
         
         # Redirect to your frontend with the token
-        redirect_url = f"https://mtm-store.com/auth-callback?token={token}&user={json.dumps(user_data)}"
+        redirect_url = f"https://radiance-of-warriors.vercel.app/armory"
         return redirect(redirect_url)
         
     except Exception as e:
