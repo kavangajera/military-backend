@@ -4,6 +4,3 @@ python-dotenv
 requests
 pandas
 python-dotenv
-authlib
-PyJWT
-google-auth
