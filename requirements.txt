@@ -4,3 +4,4 @@ python-dotenv
 requests
 pandas
 python-dotenv
+pymongo
