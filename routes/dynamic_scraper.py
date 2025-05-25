@@ -1,7 +1,6 @@
 from flask import Blueprint, request, jsonify
 import logging
 from typing import List, Dict
-import asyncio
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
@@ -12,8 +11,7 @@ from models.scrapper import (
     MilitaryDataPipeline, 
     DatabaseManager, 
     WebScraper, 
-    SketchfabIntegrator, 
-   
+    SketchfabIntegrator
 )
 
 
@@ -60,7 +58,7 @@ def run_scraping_pipeline(country_name: str, power_types: List[str], task_id: st
             
             # Step 1: Scrape data
             scraping_status[task_id]['message'] = f'Scraping {power_type} data for {country_name}'
-            scraping_status[task_id]['progress'] = base_progress + (5 / len(power_types))
+            scraping_status[task_id]['progress'] = base_progress + (10 / len(power_types))
             
             logger.info(f"Processing {power_type} for {country_name}")
             
@@ -79,17 +77,12 @@ def run_scraping_pipeline(country_name: str, power_types: List[str], task_id: st
             
             # Step 2: Add Sketchfab links
             scraping_status[task_id]['message'] = f'Adding Sketchfab links for {power_type}'
-            scraping_status[task_id]['progress'] = base_progress + (20 / len(power_types))
+            scraping_status[task_id]['progress'] = base_progress + (40 / len(power_types))
             military_data = pipeline.sketchfab.add_sketchfab_links(military_data)
             
-            # Step 3: Download and process flag images
-            scraping_status[task_id]['message'] = f'Processing images for {power_type}'
-            scraping_status[task_id]['progress'] = base_progress + (40 / len(power_types))
-            military_data = pipeline.image_downloader.process_flag_images(military_data)
-            
-            # Step 4: Save to database
+            # Step 3: Save to database
             scraping_status[task_id]['message'] = f'Saving {power_type} data to database'
-            scraping_status[task_id]['progress'] = base_progress + (60 / len(power_types))
+            scraping_status[task_id]['progress'] = base_progress + (70 / len(power_types))
             success = pipeline.db_manager.save_military_data(country_id, power_type, military_data)
             
             # Update progress after completion
@@ -124,15 +117,14 @@ def run_scraping_pipeline(country_name: str, power_types: List[str], task_id: st
         scraping_status[task_id]['progress'] = 0  # Reset progress on error
         logger.error(f"Pipeline error: {e}")
 
-# Also add this debugging endpoint to check status directly
+# Debug endpoint to check status directly
 @dynamic_scraper_bp.route('/debug/status', methods=['GET'])
 def debug_all_status():
     """Debug endpoint to see all current task statuses"""
     return jsonify({
         'success': True,
         'all_tasks': scraping_status
-    }), 200             
-    logger.error(f"Pipeline error: {e}")
+    }), 200
 
 @dynamic_scraper_bp.route('/scrape', methods=['POST'])
 def create_military_tables():
