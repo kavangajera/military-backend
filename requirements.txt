@@ -5,3 +5,5 @@ requests
 pandas
 python-dotenv
 pymongo
+openai
+beautifulsoup4
