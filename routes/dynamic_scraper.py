@@ -13,7 +13,7 @@ from models.scrapper import (
     DatabaseManager, 
     WebScraper, 
     SketchfabIntegrator, 
-    ImageDownloader
+   
 )
 
 

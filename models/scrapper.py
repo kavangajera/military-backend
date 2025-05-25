@@ -112,7 +112,7 @@ class WebScraper:
             
             for element in aircraft_elements:
                 try:
-                    data_item = self._extract_element_data(element, base_url)
+                    data_item = self._extract_element_data(element, base_url, country_name)
                     if data_item:
                         military_data.append(data_item)
                         logger.info(f"Successfully scraped data for {data_item['name']}")
@@ -126,7 +126,7 @@ class WebScraper:
             logger.error(f"Error scraping data: {e}")
             return None
     
-    def _extract_element_data(self, element, base_url: str) -> Optional[Dict]:
+    def _extract_element_data(self, element, base_url: str, country_name: str) -> Optional[Dict]:
         """Extract data from a single HTML element"""
         try:
             # Extract service information
@@ -141,16 +141,8 @@ class WebScraper:
             assessment_element = element.find('div', class_='assessmentBox')
             assessment = assessment_element.find('span', class_='textNormal textWhite').text.strip() if assessment_element else "Unknown"
             
-            # Extract flag and country information
-            flag_element = element.find('img', class_='flagMinStyling')
-            flag_url = urljoin(base_url, flag_element['src']) if flag_element and flag_element.get('src') else None
-            
-            # Extract country from flag URL
-            country = "Unknown"
-            if flag_url:
-                country_match = re.search(r'/flags/([^.]+)\.(jpg|png|webp)', flag_url)
-                if country_match:
-                    country = country_match.group(1).capitalize()
+            # Set static flag URL based on country name
+            flag_url = f"flags/{country_name.lower()}.jpg"
             
             # Extract units count
             units_element = element.find('span', class_='textJumbo')
@@ -181,7 +173,7 @@ class WebScraper:
                 "service": service,
                 "name": aircraft_name,
                 "model": model,
-                "country": country,
+                "country": country_name.title(),
                 "units": units,
                 "role": role,
                 "assessment": assessment,
@@ -280,60 +272,6 @@ class SketchfabIntegrator:
         
         return military_data
 
-class ImageDownloader:
-    """Handles image downloading and local storage"""
-    
-    def __init__(self, base_dir: str = "images"):
-        self.base_dir = base_dir
-        os.makedirs(base_dir, exist_ok=True)
-        os.makedirs(os.path.join(base_dir, 'flags'), exist_ok=True)
-    
-    def download_image(self, url: str, save_path: str) -> bool:
-        """Download an image from URL"""
-        try:
-            response = requests.get(url, stream=True)
-            if response.status_code == 200:
-                with open(save_path, 'wb') as f:
-                    for chunk in response.iter_content(1024):
-                        f.write(chunk)
-                logger.info(f"Successfully downloaded: {save_path}")
-                return True
-            else:
-                logger.warning(f"Failed to download {url}. Status code: {response.status_code}")
-                return False
-        except Exception as e:
-            logger.error(f"Error downloading {url}: {e}")
-            return False
-    
-    def process_flag_images(self, military_data: List[Dict]) -> List[Dict]:
-        """Download flag images and update URLs to local paths"""
-        processed_urls = {}
-        download_count = 0
-        
-        for i, item in enumerate(military_data):
-            if 'flag_url' in item and item['flag_url']:
-                flag_url = item['flag_url']
-                
-                # Skip if already processed
-                if flag_url in processed_urls:
-                    logger.info(f"Using existing flag download for {item['name']}")
-                    item['flag_url'] = processed_urls[flag_url]
-                    continue
-                
-                filename = os.path.basename(urlparse(flag_url).path)
-                save_path = os.path.join(self.base_dir, 'flags', filename)
-                
-                logger.info(f"Processing flag for {item['name']} ({i+1}/{len(military_data)})")
-                
-                if self.download_image(flag_url, save_path):
-                    local_path = f"flags/{filename}"
-                    item['flag_url'] = local_path
-                    processed_urls[flag_url] = local_path
-                    download_count += 1
-        
-        logger.info(f"Downloaded {download_count} unique flag images")
-        return military_data
-
 class MilitaryDataPipeline:
     """Main pipeline orchestrator"""
     
@@ -341,7 +279,6 @@ class MilitaryDataPipeline:
         self.db_manager = DatabaseManager()
         self.scraper = WebScraper()
         self.sketchfab = SketchfabIntegrator()
-        self.image_downloader = ImageDownloader()
     
     def run_pipeline(self, country_name: str, power_types: List[str]):
         """Run the complete data pipeline"""
@@ -363,10 +300,7 @@ class MilitaryDataPipeline:
                 # Step 2: Add Sketchfab links
                 military_data = self.sketchfab.add_sketchfab_links(military_data)
                 
-                # Step 3: Download and process flag images
-                military_data = self.image_downloader.process_flag_images(military_data)
-                
-                # Step 4: Save to database
+                # Step 3: Save to database
                 success = self.db_manager.save_military_data(country_id, power_type, military_data)
                 if success:
                     logger.info(f"Successfully completed {power_type} pipeline for {country_name}")
